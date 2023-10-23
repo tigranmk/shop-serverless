@@ -3,7 +3,7 @@ import { middyfy } from '@libs/lambda';
 import { prepareResponse } from "@libs/response/format";
 import { useDbConnection } from "@libs/useDbConnection";
 import { getErrorMessage } from "@libs/utils";
-import { RESP_STATUS_CODES } from "@utils/constants";
+import { RESPONSE_STATUS_CODES } from "@utils/constants";
 
 const { WORK_REGION, DYNAMO_PRODUCTS_TABLE, DYNAMO_STOCKS_TABLE } = process.env;
 
@@ -14,7 +14,7 @@ const getProducts = async (event) => {
   return useDbConnection({ region: WORK_REGION }, async (dbConnectionError, dbClient) => {
 
     if (dbConnectionError || !dbClient) {
-      return prepareResponse(RESP_STATUS_CODES.INTERNAL_ERROR, requestOrigin, { error: getErrorMessage(dbConnectionError, 'unknown error during DB connection') },)
+      return prepareResponse(RESPONSE_STATUS_CODES.INTERNAL_ERROR, requestOrigin, { error: getErrorMessage(dbConnectionError, 'unknown error during DB connection') },)
     }
 
     try {
@@ -38,11 +38,11 @@ const getProducts = async (event) => {
         return null;
       })
 
-      return prepareResponse(RESP_STATUS_CODES.OK, requestOrigin, { products: jointProductsAndStocks });
+      return prepareResponse(RESPONSE_STATUS_CODES.OK, requestOrigin, { products: jointProductsAndStocks });
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error, 'unknown error during DB request')
 
-      return prepareResponse(RESP_STATUS_CODES.INTERNAL_ERROR, requestOrigin, { error: errorMessage })
+      return prepareResponse(RESPONSE_STATUS_CODES.INTERNAL_ERROR, requestOrigin, { error: errorMessage })
     }
   })
 };
