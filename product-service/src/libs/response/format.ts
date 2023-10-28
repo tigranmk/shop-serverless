@@ -1,4 +1,4 @@
-export const prepareResponse = (statusCode: number, requestOrigin: string, response: Record<string, unknown>) => {
+export const prepareResponse = (statusCode: number, requestOrigin: string, response?: Record<string, unknown>) => {
   return {
     statusCode,
     headers: {

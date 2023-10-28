@@ -1,0 +1,1 @@
+export const getErrorMessage = (error: unknown, defaultMessage: string) => error instanceof Error ? error.message : defaultMessage
