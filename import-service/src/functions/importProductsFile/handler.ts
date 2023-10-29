@@ -12,7 +12,6 @@ const { BUCKET_REGION } = process.env;
 const importFileParser = async (event: APIGatewayProxyEvent) => {
   const requestOrigin = event.headers.origin || '';
 
-  console.log('importFileParser Lambda triggered');
   const { queryStringParameters } = event || {};
   if (queryStringParameters && queryStringParameters.name) {
     const { name } = queryStringParameters

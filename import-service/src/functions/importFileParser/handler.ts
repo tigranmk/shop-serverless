@@ -1,11 +1,12 @@
 import { S3Client, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { S3Event } from "aws-lambda";
 import csvParser from 'csv-parser';
 import { RESPONSE_STATUS_CODES } from "@utils/constants";
 import { ERR_MSGS } from "@utils/messages";
 import { Readable } from "stream";
 
-const { BUCKET_REGION } = process.env;
+const { BUCKET_REGION, SQS_REGION, SQS_URL } = process.env;
 
 const copyCommand = async (client, record) => {
   const copyFile = new CopyObjectCommand({
@@ -15,7 +16,6 @@ const copyCommand = async (client, record) => {
   })
 
   await client.send(copyFile);
-  console.log('importFileParser moved csv to parsed location');
 }
 
 const deleteCommand = async (client, record) => {
@@ -25,14 +25,12 @@ const deleteCommand = async (client, record) => {
     Key: record.s3.object.key
   })
   await client.send(deleteFile);
-  console.log('importFileParser deleted from uploaded location');
 }
 
 const importFileParser = async (event: S3Event) => {
   try {
     const records = event.Records;
     const recordsLength = records.length;
-    console.log('Import file parser lambda was triggered with records: ', records);
 
     if (recordsLength === 0) {
       throw new Error();
@@ -57,24 +55,35 @@ const importFileParser = async (event: S3Event) => {
         throw new Error(`${RECORD_INFO} ${ERR_MSGS.MSG_ERROR_DURING_READ_STREAM}`);
       }
 
+      const sqsClient = new SQSClient({
+        region: SQS_REGION
+      })
+
       return new Promise((resolve, reject) => {
         s3StreamBody
           .pipe(csvParser())
-          .on('data', (data) => {
-            console.log(RECORD_INFO, `Parsing product import CSV data: `, data);
+          .on('data', async (data) => {
+            const command = new SendMessageCommand({
+              QueueUrl: SQS_URL,
+              MessageBody: JSON.stringify(data),
+            });
+            const response = await sqsClient.send(command);
           })
-          .on('error', (error) => {
-            console.error(RECORD_INFO, `Parsing error for product import CSV data: `, error);
+          .on('error', async (error) => {
+            const command = new SendMessageCommand({
+              QueueUrl: SQS_URL,
+              MessageBody: JSON.stringify(error),
+            });
+            await sqsClient.send(command);
             reject(new Error(`${RECORD_INFO} ${ERR_MSGS.MSG_ERROR_DURING_READ_STREAM}`));
           })
           .on('end', async () => {
-            console.log(
-              RECORD_INFO,
-              `Product data parsed. Moving to "/parsed" folder has started.`
-            );
             await Promise.all([copyCommand(s3Client, record), deleteCommand(s3Client, record)]);
-
-            console.log(RECORD_INFO, 'Uploaded record deleted successfully!');
+            const command = new SendMessageCommand({
+              QueueUrl: SQS_URL,
+              MessageBody: 'Uploaded record deleted successfully!',
+            });
+            await sqsClient.send(command);
             resolve('ok')
           });
 

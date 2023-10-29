@@ -10,15 +10,14 @@ const { WORK_REGION } = process.env;
 
 
 const createProduct = async (event) => {
-  console.log('Received event:', JSON.stringify(event, null, 2));
-  const { products, stocks } = event.body;
+  const { products } = event.body;
   const requestOrigin = event.headers.origin || '';
   const client = new DynamoDBClient({ region: WORK_REGION });
   const dbClient = DynamoDBDocument.from(client);
 
   try {
-    if (isValidProductData(products, stocks)) {
-      await productsDbDynamoAdapter.createProducts(products, stocks, dbClient, 'PRODUCTS')
+    if (isValidProductData(products)) {
+      await productsDbDynamoAdapter.createProducts(products, dbClient, 'PRODUCTS')
       return prepareResponse(RESPONSE_STATUS_CODES.CREATED, requestOrigin);
     } else {
       return prepareResponse(RESPONSE_STATUS_CODES.BAD_REQUEST, requestOrigin, { error: 'Product is invalid' })

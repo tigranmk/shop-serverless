@@ -3,6 +3,8 @@ import type { AWS } from '@serverless/typescript';
 import getProducts from '@functions/getProducts';
 import getProductsById from '@functions/getProductsById';
 import createProduct from '@functions/createProduct';
+import createBatchProcess from '@functions/catalogBatchProcess';
+
 
 const serverlessConfiguration: AWS = {
   service: 'product-service',
@@ -21,6 +23,9 @@ const serverlessConfiguration: AWS = {
       DYNAMO_PRODUCTS_TABLE: 'PRODUCTS',
       DYNAMO_STOCKS_TABLE: 'STOCKS',
       NODE_OPTIONS: '--enable-source-maps --stack-trace-limit=1000',
+      SNS_REGION: 'us-west-1',
+      SQS_QUEUE_URL: { Ref: "catalogItemsQueue" },
+      SNS_TOPIC_ARN: { Ref: "createProductTopic" },
     },
     iamRoleStatements: [
       {
@@ -34,10 +39,58 @@ const serverlessConfiguration: AWS = {
         ],
         Resource: "*",
       },
+      {
+        Effect: "Allow",
+        Action: "sqs:*",
+        Resource: { "Fn::GetAtt": ["catalogItemsQueue", "Arn"] },
+      },
+      {
+        Effect: "Allow",
+        Action: "sns:*",
+        Resource: { Ref: "createProductTopic" },
+      },
     ],
   },
   resources: {
     Resources: {
+      catalogItemsQueue: {
+        Type: "AWS::SQS::Queue",
+        Properties: {
+          QueueName: "catalogItemsQueue",
+        },
+      },
+      createProductTopic: {
+        Type: "AWS::SNS::Topic",
+        Properties: {
+          TopicName: "createProductTopic",
+        },
+      },
+      createProductSubscription: {
+        Type: "AWS::SNS::Subscription",
+        Properties: {
+          Protocol: "email",
+          Endpoint: "tigran_mkrtchyan@epam.com",
+          FilterPolicy: {
+            productsAmount: [{ numeric: ["<", 2] }],
+          },
+          TopicArn: {
+            Ref: "createProductTopic",
+          },
+        },
+      },
+      filterSubscription: {
+        Type: "AWS::SNS::Subscription",
+        Properties: {
+          Protocol: "email",
+          FilterPolicy: {
+            productsAmount: [{ numeric: [">", 2] }],
+          },
+          Endpoint: 'tgnmkrtchyan@gmail.com',
+          TopicArn: {
+            Ref: "createProductTopic",
+          },
+        },
+      },
       "products": {
         Type: "AWS::DynamoDB::Table",
         Properties: {
@@ -81,7 +134,7 @@ const serverlessConfiguration: AWS = {
     }
 
   },
-  functions: { getProducts, getProductsById, createProduct },
+  functions: { getProducts, getProductsById, createProduct, createBatchProcess },
   package: { individually: true },
   custom: {
     esbuild: {

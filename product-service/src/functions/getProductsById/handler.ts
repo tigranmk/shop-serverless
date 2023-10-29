@@ -8,7 +8,6 @@ import { RESPONSE_STATUS_CODES } from '@utils/constants';
 const { WORK_REGION, DYNAMO_PRODUCTS_TABLE } = process.env;
 
 const getProductsById = async (event) => {
-  console.log('Received event:', JSON.stringify(event, null, 2));
   const requestOrigin = event.headers.origin || '';
   const productId = event.pathParameters.productId;
 

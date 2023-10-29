@@ -1,19 +1,12 @@
-import { Product, Stock } from "types";
+import { Product } from "types";
 
-export function isValidProductData(products: Product[], stocks: Stock[]): boolean {
+export function isValidProductData(products: Product[]): boolean {
   for (const product of products) {
       if (
           typeof product.title !== 'string' ||
           typeof product.description !== 'string' ||
-          typeof product.price !== 'number'
-      ) {
-          return false;
-      }
-  }
-
-  for (const stock of stocks) {
-      if (
-          typeof stock.count !== 'number'
+          typeof product.price !== 'number' ||
+          typeof product.count !== 'number'
       ) {
           return false;
       }
