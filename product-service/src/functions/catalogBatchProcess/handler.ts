@@ -14,12 +14,9 @@ export const createBatchProcess = async (event: SQSEvent) => {
     if (recordsLength === 0) {
       throw new Error();
     }
-    console.log('productRecords', records)
     const productRecords: CreateProductBody[] = JSON.parse(records[0].body);
-    console.log('productRecords', productRecords)
     
     await productsDbDynamoAdapter.createProducts(productRecords);
-    console.log('createBatchProcess completed');
 
     const snsClient = new SNSClient({ region: SNS_REGION });
     const command = new PublishCommand({
@@ -30,8 +27,7 @@ export const createBatchProcess = async (event: SQSEvent) => {
         productsAmount: { DataType: 'Number', StringValue: productRecords.length.toString() },
       }
     });
-    const response = await snsClient.send(command);
-    console.log('Sent email notification', response);
+    await snsClient.send(command);
   } catch (e) {
     console.log(e)
   }
