@@ -2,24 +2,24 @@ import { DynamoDBClient, TransactWriteItemsCommand } from "@aws-sdk/client-dynam
 import { v4 as uuidV4 } from 'uuid';
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 import { CreateProductBody, IProductDBController } from "../types/products";
-import { CreateStockBody } from "../types/stocks";
 
 const { WORK_REGION, DYNAMO_PRODUCTS_TABLE, DYNAMO_STOCKS_TABLE } = process.env;
 const client = new DynamoDBClient({ region: WORK_REGION });
 const dbClientDocument = DynamoDBDocument.from(client);
 
 export const productsDbDynamoAdapter: IProductDBController = {
-    async createProducts(products: CreateProductBody[], stocks: CreateStockBody[]) {
-        const createProductId = uuidV4();
+    async createProducts(products: CreateProductBody[]) {
         const productsWithId = products.map(product => ({
             ...product,
-            id: createProductId
+            id: uuidV4()
         }))
 
-        const stocksWithId = stocks.map(stock => ({
-            ...stock,
-            product_id: createProductId
-        }))
+        const stocksWithId = productsWithId.map(product => {
+            return {
+                count: product.count,
+                product_id: product.id
+            }
+        });
 
         const productsItems = productsWithId.map(item => ({
             Put: {
@@ -28,6 +28,7 @@ export const productsDbDynamoAdapter: IProductDBController = {
                     title: { S: item.title },
                     description: { S: item.description },
                     price: { N: item.price.toString() },
+                    id: { S: item.id }
                 },
                 ConditionExpression: 'attribute_not_exists(id)',
             },
@@ -38,11 +39,12 @@ export const productsDbDynamoAdapter: IProductDBController = {
                 TableName: DYNAMO_STOCKS_TABLE,
                 Item: {
                     count: { N: item.count.toString() },
+                    product_id: { S: item.product_id }
                 },
                 ConditionExpression: 'attribute_not_exists(product_id)',
             },
         }));
-        
+
 
         const transactItems = {
             products: [...productsItems],
