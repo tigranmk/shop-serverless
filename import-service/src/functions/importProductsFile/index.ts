@@ -1,4 +1,5 @@
 import { handlerPath } from '@libs/handler-resolver';
+import 'dotenv/config'
 
 export default {
   handler: `${handlerPath(__dirname)}/handler.main`,
@@ -14,6 +15,10 @@ export default {
               name: true
             }
           }
+        },
+        authorizer: {
+          arn: process.env.AUTHORIZER_ARN,
+          type: 'request'
         }
       },
     },
